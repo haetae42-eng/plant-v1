@@ -1032,6 +1032,7 @@ export class GardenGameScene extends Phaser.Scene {
   private headerResourceCardWidth = 96;
 
   private toastTimer?: Phaser.Time.TimerEvent;
+  private heartbeatTimer?: Phaser.Time.TimerEvent;
   private autoSaveTimer?: Phaser.Time.TimerEvent;
 
   private commitSaveSnapshot(touchLastActiveAt = false): void {
@@ -1068,6 +1069,19 @@ export class GardenGameScene extends Phaser.Scene {
     }
 
   };
+
+  private shouldRenderHomeOnHeartbeat(): boolean {
+    if (this.harvestNicknameModal || this.attendanceAdConfirmModal || this.decorGoalModal || this.decorSlotEditModal) {
+      return false;
+    }
+
+    if (this.isHomeCustomizeGridOpen || this.isHomeAttendancePanelOpen) {
+      return true;
+    }
+
+    const selectedSlot = this.getSelectedSlot() ?? this.saveData.garden.slots[0];
+    return Boolean(selectedSlot?.planted);
+  }
 
   constructor() {
     super("GardenGameScene");
@@ -1204,7 +1218,7 @@ export class GardenGameScene extends Phaser.Scene {
       this.showToast(`오프라인 자동코인 +${applied.report.passiveCoinsGained}`);
     }
 
-    this.time.addEvent({
+    this.heartbeatTimer = this.time.addEvent({
       delay: 1000,
       loop: true,
       callback: () => {
@@ -1221,7 +1235,9 @@ export class GardenGameScene extends Phaser.Scene {
 
         this.renderHeader();
         if (this.activeTab === "home") {
-          this.renderMain();
+          if (this.shouldRenderHomeOnHeartbeat()) {
+            this.renderMain();
+          }
           this.maybePlayHomeIdleWaterDrop(now);
         } else {
           this.nextHomeIdleWaterDropAt = 0;
@@ -1293,6 +1309,10 @@ export class GardenGameScene extends Phaser.Scene {
     this.closeDecorSlotEditModal();
     document.removeEventListener("visibilitychange", this.onVisibilityChange);
     window.removeEventListener("beforeunload", this.flushSave);
+    if (this.heartbeatTimer) {
+      this.heartbeatTimer.remove(false);
+      this.heartbeatTimer = undefined;
+    }
     if (this.autoSaveTimer) {
       this.autoSaveTimer.remove(false);
       this.autoSaveTimer = undefined;

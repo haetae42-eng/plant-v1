@@ -20,15 +20,24 @@ const gameConfig: Phaser.Types.Core.GameConfig = {
 };
 
 const game = new Phaser.Game(gameConfig);
+let refreshFrameId: number | null = null;
 const refreshScale = () => {
-  game.scale.refresh();
+  if (refreshFrameId !== null) {
+    return;
+  }
+  refreshFrameId = window.requestAnimationFrame(() => {
+    refreshFrameId = null;
+    game.scale.refresh();
+  });
 };
 
 window.addEventListener("resize", refreshScale);
-window.visualViewport?.addEventListener("resize", refreshScale);
 
 window.addEventListener("beforeunload", () => {
   window.removeEventListener("resize", refreshScale);
-  window.visualViewport?.removeEventListener("resize", refreshScale);
+  if (refreshFrameId !== null) {
+    window.cancelAnimationFrame(refreshFrameId);
+    refreshFrameId = null;
+  }
   game.destroy(true);
 });
