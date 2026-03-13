@@ -1,0 +1,13 @@
+node_modules
+npm-debug.log*
+.env
+.env.*
+!.env.example
+.DS_Store
+coverage
+*.local
+app/dist
+app/public/assets/generated
+functions/lib
+shared/dist
+.firebase

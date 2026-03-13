@@ -1,0 +1,15 @@
+{
+  "name": "haetae-quiz-pet-mvp",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "app",
+    "functions",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace app",
+    "build": "npm run build --workspace shared && npm run build --workspace app && npm run build --workspace functions",
+    "typecheck": "npm run typecheck --workspace shared && npm run typecheck --workspace app && npm run typecheck --workspace functions"
+  }
+}
