@@ -616,6 +616,8 @@ const LOADING_POT_CUTOUT_TEXTURE_KEY = "ui_loading_pot_cutout";
 const LOADING_SPROUT_TEXTURE_KEY = "ui_loading_sprout";
 const LOADING_SPROUT_IMAGE_PATH = "assets/ui/ui_loading_sprout.png";
 const LOADING_SPROUT_CUTOUT_TEXTURE_KEY = "ui_loading_sprout_cutout";
+const STARTUP_SUSPENSE_PROGRESS_BAR_WIDTH = 224;
+const STARTUP_SUSPENSE_PROGRESS_BAR_HEIGHT = 14;
 const ATTENDANCE_AD_CONFIRM_MESSAGE = "보상을 받으려면 광고를 시청해야 합니다.\n시청하시겠습니까?";
 const MAX_PLANT_NICKNAME_LENGTH = 5;
 const HARVEST_NICKNAME_INPUT_CENTER_X = 195;
@@ -1023,6 +1025,9 @@ export class GardenGameScene extends Phaser.Scene {
   private isDecorPixelSampleMode = false;
   private wasHomePlantHarvestable = false;
   private startupSuspenseLayer: Phaser.GameObjects.Container | null = null;
+  private startupSuspenseCaptionText: Phaser.GameObjects.Text | null = null;
+  private startupSuspenseProgressText: Phaser.GameObjects.Text | null = null;
+  private startupSuspenseProgressBarFill: Phaser.GameObjects.Rectangle | null = null;
 
   private coinsText!: Phaser.GameObjects.Text;
   private seedText!: Phaser.GameObjects.Text;
@@ -1175,6 +1180,7 @@ export class GardenGameScene extends Phaser.Scene {
     });
 
     if (queuedCount <= 0) {
+      this.updateStartupSuspenseProgress(1);
       this.createSeedDropTexture();
       this.createAttendanceRewardCardTexture();
       this.createAttendanceGemIconTexture();
@@ -1191,10 +1197,16 @@ export class GardenGameScene extends Phaser.Scene {
       deferredLoadErrorCount += 1;
       console.warn(`[loader] deferred asset load failed: ${file.key} (${file.src ?? "unknown src"})`);
     };
+    const onDeferredLoadProgress = (value: number): void => {
+      this.updateStartupSuspenseProgress(value);
+    };
 
     this.load.on(Phaser.Loader.Events.FILE_LOAD_ERROR, onDeferredLoadError);
+    this.load.on(Phaser.Loader.Events.PROGRESS, onDeferredLoadProgress);
     this.load.once(Phaser.Loader.Events.COMPLETE, () => {
       this.load.off(Phaser.Loader.Events.FILE_LOAD_ERROR, onDeferredLoadError);
+      this.load.off(Phaser.Loader.Events.PROGRESS, onDeferredLoadProgress);
+      this.updateStartupSuspenseProgress(1);
       this.createSeedDropTexture();
       this.createAttendanceRewardCardTexture();
       this.createAttendanceGemIconTexture();
@@ -1231,14 +1243,40 @@ export class GardenGameScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
     const caption = this.add
-      .text(195, 455, "이미지를 불러오는 중입니다...", {
+      .text(195, 455, "이미지를 불러오는 중입니다... (0%)", {
         fontFamily: "Pretendard, sans-serif",
         fontSize: "13px",
         color: "#5f6657",
         fontStyle: "700"
       })
       .setOrigin(0.5);
-    layer.add([title, caption]);
+    const progressBarTrack = this.add
+      .rectangle(195, 486, STARTUP_SUSPENSE_PROGRESS_BAR_WIDTH, STARTUP_SUSPENSE_PROGRESS_BAR_HEIGHT, 0xd8cfb8, 1)
+      .setStrokeStyle(2, 0xb7a681, 0.95);
+    const progressBarFill = this.add
+      .rectangle(
+        195 - STARTUP_SUSPENSE_PROGRESS_BAR_WIDTH / 2 + 2,
+        486,
+        STARTUP_SUSPENSE_PROGRESS_BAR_WIDTH - 4,
+        STARTUP_SUSPENSE_PROGRESS_BAR_HEIGHT - 4,
+        0x5f8a54,
+        1
+      )
+      .setOrigin(0, 0.5);
+    const progressText = this.add
+      .text(195, 509, "0%", {
+        fontFamily: "Pretendard, sans-serif",
+        fontSize: "12px",
+        color: "#4f5d45",
+        fontStyle: "700"
+      })
+      .setOrigin(0.5);
+
+    layer.add([title, caption, progressBarTrack, progressBarFill, progressText]);
+    this.startupSuspenseCaptionText = caption;
+    this.startupSuspenseProgressText = progressText;
+    this.startupSuspenseProgressBarFill = progressBarFill;
+    this.updateStartupSuspenseProgress(0);
     this.tweens.add({
       targets: [title, caption],
       alpha: { from: 0.5, to: 1 },
@@ -1255,7 +1293,25 @@ export class GardenGameScene extends Phaser.Scene {
     }
     this.startupSuspenseLayer.destroy(true);
     this.startupSuspenseLayer = null;
+    this.startupSuspenseCaptionText = null;
+    this.startupSuspenseProgressText = null;
+    this.startupSuspenseProgressBarFill = null;
     this.renderAll();
+  }
+
+  private updateStartupSuspenseProgress(value: number): void {
+    const clamped = Phaser.Math.Clamp(value, 0, 1);
+    const percent = Math.round(clamped * 100);
+
+    if (this.startupSuspenseProgressBarFill) {
+      this.startupSuspenseProgressBarFill.setScale(clamped, 1);
+    }
+    if (this.startupSuspenseProgressText) {
+      this.startupSuspenseProgressText.setText(`${percent}%`);
+    }
+    if (this.startupSuspenseCaptionText) {
+      this.startupSuspenseCaptionText.setText(`이미지를 불러오는 중입니다... (${percent}%)`);
+    }
   }
 
   create(): void {
@@ -1381,6 +1437,9 @@ export class GardenGameScene extends Phaser.Scene {
       this.startupSuspenseLayer.destroy(true);
       this.startupSuspenseLayer = null;
     }
+    this.startupSuspenseCaptionText = null;
+    this.startupSuspenseProgressText = null;
+    this.startupSuspenseProgressBarFill = null;
     this.deferredVisualAssetsReadyCallbacks = [];
     document.removeEventListener("visibilitychange", this.onVisibilityChange);
     window.removeEventListener("beforeunload", this.flushSave);
