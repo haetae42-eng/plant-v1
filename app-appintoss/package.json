@@ -1,0 +1,27 @@
+{
+  "name": "haetae-idle-garden-appintoss",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npm run dev:web",
+    "dev:web": "node scripts/dev-with-assets.mjs --host",
+    "build": "ait build",
+    "build:web": "npm run assets:sync && vite build",
+    "assets:sync": "node scripts/assets-pipeline.mjs",
+    "assets:watch": "node scripts/assets-pipeline.mjs --watch",
+    "preview": "vite preview",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@apps-in-toss/web-framework": "^2.0.1",
+    "phaser": "^3.90.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "typescript": "^5.7.3",
+    "vite": "^5.4.14",
+    "vitest": "^2.1.9"
+  }
+}

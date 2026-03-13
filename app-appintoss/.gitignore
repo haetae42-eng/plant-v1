@@ -1,0 +1,5 @@
+dist
+.granite
+node_modules
+*.ait
+.DS_Store
